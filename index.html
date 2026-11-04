@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Money Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-content">
+        <h1>Money Tracker</h1>
+        <p class="subtitle">Track income & expenses simply</p>
+      </div>
+      <div class="header-badge" id="total-count-badge" aria-label="Total transactions count">
+        <span class="badge-label">Total Transactions</span>
+        <span class="badge-value" id="header-transaction-count">0</span>
+      </div>
+    </header>
+
+    <!-- Overview Stats -->
+    <section class="overview-grid" aria-label="Financial overview">
+      <div class="stat-card balance-card">
+        <span class="stat-title">Current Balance</span>
+        <span class="stat-amount" id="total-balance">$0.00</span>
+      </div>
+      <div class="stat-card income-card">
+        <span class="stat-title">Total Income</span>
+        <span class="stat-amount income-text" id="total-income">+$0.00</span>
+      </div>
+      <div class="stat-card expense-card">
+        <span class="stat-title">Total Expenses</span>
+        <span class="stat-amount expense-text" id="total-expense">-$0.00</span>
+      </div>
+    </section>
+
+    <!-- Transaction Form Card -->
+    <section class="card form-card">
+      <div class="card-header">
+        <h2 id="form-title">Add New Transaction</h2>
+        <span class="form-mode-indicator" id="form-mode-indicator" style="display: none;">Editing</span>
+      </div>
+
+      <form id="transaction-form" novalidate>
+        <input type="hidden" id="edit-id" value="">
+
+        <div class="form-group">
+          <label for="transaction-name">Transaction Name</label>
+          <input 
+            type="text" 
+            id="transaction-name" 
+            name="transaction-name" 
+            placeholder="e.g. Salary, Groceries, Coffee" 
+            required
+            autocomplete="off"
+            maxlength="60"
+          >
+          <small class="error-msg" id="name-error">Please enter a transaction name</small>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="transaction-amount">Amount ($)</label>
+            <input 
+              type="number" 
+              id="transaction-amount" 
+              name="transaction-amount" 
+              placeholder="0.00" 
+              min="0.01" 
+              step="0.01" 
+              required
+            >
+            <small class="error-msg" id="amount-error">Please enter a valid amount greater than 0</small>
+          </div>
+
+          <div class="form-group">
+            <label for="transaction-type">Type</label>
+            <div class="type-selector" role="radiogroup" aria-label="Transaction type">
+              <label class="type-option expense-opt">
+                <input type="radio" name="transaction-type" value="Expense" checked>
+                <span class="type-btn">Expense</span>
+              </label>
+              <label class="type-option income-opt">
+                <input type="radio" name="transaction-type" value="Income">
+                <span class="type-btn">Income</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="submit-btn">
+            Add Transaction
+          </button>
+          <button type="button" class="btn btn-secondary" id="cancel-btn" style="display: none;">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Transactions List Card -->
+    <section class="card list-card">
+      <div class="card-header list-header">
+        <h2>Transactions</h2>
+        <div class="list-count-badge" id="visible-count-badge">0 items</div>
+      </div>
+
+      <!-- Search & Filters -->
+      <div class="search-filter-bar">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input 
+            type="text" 
+            id="search-input" 
+            placeholder="Search by name..." 
+            aria-label="Search transactions"
+            autocomplete="off"
+          >
+          <button type="button" id="clear-search-btn" class="clear-btn" aria-label="Clear search" style="display: none;">
+            &times;
+          </button>
+        </div>
+
+        <div class="filter-tabs" role="tablist" aria-label="Filter transactions">
+          <button type="button" class="filter-tab active" data-filter="all">All</button>
+          <button type="button" class="filter-tab" data-filter="Income">Income</button>
+          <button type="button" class="filter-tab" data-filter="Expense">Expense</button>
+        </div>
+      </div>
+
+      <!-- Transactions List -->
+      <ul class="transaction-list" id="transaction-list" aria-live="polite">
+        <!-- Rendered by JavaScript -->
+      </ul>
+
+      <!-- Friendly Empty State -->
+      <div class="empty-state" id="empty-state" style="display: none;">
+        <div class="empty-icon" id="empty-icon">🌱</div>
+        <h3 id="empty-title">No transactions yet</h3>
+        <p id="empty-message">Your list is clear! Add your first transaction above to start tracking your money.</p>
+        <button type="button" class="btn btn-outline" id="empty-action-btn" style="display: none;">
+          Clear Filter &amp; Search
+        </button>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
