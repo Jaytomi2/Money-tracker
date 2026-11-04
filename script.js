@@ -44,13 +44,51 @@
   const emptyMessageEl = document.getElementById('empty-message');
   const emptyActionBtn = document.getElementById('empty-action-btn');
 
-  // --- Currency Formatter ---
-  const currencyFormatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
+  // --- Currency Helpers (Nigerian Naira ₦) ---
+  function formatCurrency(amount) {
+    const num = Math.abs(Number(amount) || 0);
+    const formatted = num.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    return '₦' + formatted;
+  }
+
+  function formatBalance(amount) {
+    const num = Number(amount) || 0;
+    const formatted = Math.abs(num).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    return (num < 0 ? '-₦' : '₦') + formatted;
+  }
+
+  // --- Amount Input Helpers (Commas as Thousand Separators) ---
+  function formatAmountValue(val) {
+    if (val === null || val === undefined || val === '') return '';
+    let clean = val.toString().replace(/,/g, '').replace(/[^0-9.]/g, '');
+    const dotIndex = clean.indexOf('.');
+    let integerPart = dotIndex !== -1 ? clean.slice(0, dotIndex) : clean;
+    let decimalPart = dotIndex !== -1 ? clean.slice(dotIndex + 1).replace(/\./g, '').slice(0, 2) : null;
+
+    if (integerPart.length > 1 && integerPart.startsWith('0')) {
+      integerPart = integerPart.replace(/^0+/, '') || '0';
+    }
+
+    const formattedInt = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    if (dotIndex !== -1) {
+      return (formattedInt === '' ? '0' : formattedInt) + '.' + decimalPart;
+    }
+    return formattedInt;
+  }
+
+  function parseNumericAmount(val) {
+    if (typeof val === 'number') return val;
+    if (!val) return NaN;
+    const clean = val.toString().replace(/,/g, '').trim();
+    return parseFloat(clean);
+  }
 
   // --- Local Storage Helpers ---
   function loadTransactions() {
@@ -95,7 +133,7 @@
 
     const balance = incomeTotal - expenseTotal;
 
-    totalBalanceEl.textContent = currencyFormatter.format(balance);
+    totalBalanceEl.textContent = formatBalance(balance);
     if (balance < 0) {
       totalBalanceEl.classList.add('expense-text');
       totalBalanceEl.classList.remove('income-text');
@@ -106,8 +144,8 @@
       totalBalanceEl.classList.remove('income-text', 'expense-text');
     }
 
-    totalIncomeEl.textContent = '+' + currencyFormatter.format(incomeTotal);
-    totalExpenseEl.textContent = '-' + currencyFormatter.format(expenseTotal);
+    totalIncomeEl.textContent = '+' + formatCurrency(incomeTotal);
+    totalExpenseEl.textContent = '-' + formatCurrency(expenseTotal);
   }
 
   // --- Filtering & Searching ---
@@ -122,7 +160,9 @@
       if (searchQuery.trim() !== '') {
         const query = searchQuery.trim().toLowerCase();
         const nameMatch = t.name.toLowerCase().includes(query);
-        const amountMatch = t.amount.toString().includes(query);
+        const amountClean = t.amount.toString();
+        const formattedAmount = formatCurrency(t.amount).toLowerCase();
+        const amountMatch = amountClean.includes(query.replace(/,/g, '')) || formattedAmount.includes(query);
         const typeMatch = t.type.toLowerCase().includes(query);
         return nameMatch || amountMatch || typeMatch;
       }
@@ -168,7 +208,7 @@
     // Build List Items HTML
     transactionListEl.innerHTML = filtered.map(t => {
       const isIncome = t.type === 'Income';
-      const formattedAmount = (isIncome ? '+' : '-') + currencyFormatter.format(t.amount);
+      const formattedAmount = (isIncome ? '+' : '-') + formatCurrency(t.amount);
       const isCurrentlyEditing = t.id === currentEditId;
 
       return `
@@ -234,7 +274,7 @@
       nameError.classList.remove('visible');
     }
 
-    const amountVal = parseFloat(amountInput.value);
+    const amountVal = parseNumericAmount(amountInput.value);
     if (isNaN(amountVal) || amountVal <= 0) {
       amountInput.classList.add('has-error');
       amountError.classList.add('visible');
@@ -251,7 +291,7 @@
     for (const radio of typeRadios) {
       if (radio.checked) return radio.value;
     }
-    return 'Expense';
+    return 'Income';
   }
 
   function setSelectedType(type) {
@@ -272,7 +312,7 @@
     nameError.classList.remove('visible');
     amountInput.classList.remove('has-error');
     amountError.classList.remove('visible');
-    setSelectedType('Expense');
+    setSelectedType('Income');
   }
 
   function handleFormSubmit(e) {
@@ -281,7 +321,7 @@
     if (!validateForm()) return;
 
     const name = nameInput.value.trim();
-    const amount = parseFloat(parseFloat(amountInput.value).toFixed(2));
+    const amount = parseFloat(parseNumericAmount(amountInput.value).toFixed(2));
     const type = getSelectedType();
 
     if (currentEditId) {
@@ -322,7 +362,7 @@
     currentEditId = id;
     editIdInput.value = tx.id;
     nameInput.value = tx.name;
-    amountInput.value = tx.amount;
+    amountInput.value = formatAmountValue(tx.amount.toString());
     setSelectedType(tx.type);
 
     formTitle.textContent = 'Edit Transaction';
@@ -353,7 +393,7 @@
     if (!tx) return;
 
     // Confirm deletion first
-    const confirmed = window.confirm(`Are you sure you want to delete "${tx.name}" (${currencyFormatter.format(tx.amount)})?`);
+    const confirmed = window.confirm(`Are you sure you want to delete "${tx.name}" (${formatCurrency(tx.amount)})?`);
     if (!confirmed) return;
 
     transactions = transactions.filter(t => t.id !== id);
@@ -382,11 +422,55 @@
       }
     });
 
+    // Automatically format amount with commas as thousand separators while typing
     amountInput.addEventListener('input', () => {
-      const val = parseFloat(amountInput.value);
+      const originalValue = amountInput.value;
+      const cursor = amountInput.selectionStart;
+
+      const nonCommaBefore = originalValue.slice(0, cursor).replace(/,/g, '').length;
+      const formatted = formatAmountValue(originalValue);
+      amountInput.value = formatted;
+
+      let newCursor = 0;
+      let nonCommaCount = 0;
+      while (newCursor < formatted.length && nonCommaCount < nonCommaBefore) {
+        if (formatted[newCursor] !== ',') {
+          nonCommaCount++;
+        }
+        newCursor++;
+      }
+      amountInput.setSelectionRange(newCursor, newCursor);
+
+      const val = parseNumericAmount(formatted);
       if (!isNaN(val) && val > 0) {
         amountInput.classList.remove('has-error');
         amountError.classList.remove('visible');
+      }
+    });
+
+    // Handle Backspace when cursor is immediately after a comma
+    amountInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && amountInput.selectionStart === amountInput.selectionEnd) {
+        const pos = amountInput.selectionStart;
+        if (pos > 0 && amountInput.value[pos - 1] === ',') {
+          e.preventDefault();
+          const before = amountInput.value.slice(0, pos - 2);
+          const after = amountInput.value.slice(pos);
+          const updated = before + after;
+          const nonCommaBefore = before.replace(/,/g, '').length;
+          const formatted = formatAmountValue(updated);
+          amountInput.value = formatted;
+
+          let newCursor = 0;
+          let nonCommaCount = 0;
+          while (newCursor < formatted.length && nonCommaCount < nonCommaBefore) {
+            if (formatted[newCursor] !== ',') {
+              nonCommaCount++;
+            }
+            newCursor++;
+          }
+          amountInput.setSelectionRange(newCursor, newCursor);
+        }
       }
     });
 
