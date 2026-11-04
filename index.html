@@ -47,6 +47,22 @@
       <form id="transaction-form" novalidate>
         <input type="hidden" id="edit-id" value="">
 
+        <!-- 1. Transaction Type -->
+        <div class="form-group">
+          <label for="transaction-type">Type</label>
+          <div class="type-selector" role="radiogroup" aria-label="Transaction type">
+            <label class="type-option income-opt">
+              <input type="radio" name="transaction-type" value="Income" checked>
+              <span class="type-btn">Income</span>
+            </label>
+            <label class="type-option expense-opt">
+              <input type="radio" name="transaction-type" value="Expense">
+              <span class="type-btn">Expense</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 2. Transaction Name -->
         <div class="form-group">
           <label for="transaction-name">Transaction Name</label>
           <input 
@@ -61,6 +77,7 @@
           <small class="error-msg" id="name-error">Please enter a transaction name</small>
         </div>
 
+        <!-- 3. Amount & 4. Date -->
         <div class="form-row">
           <div class="form-group">
             <label for="transaction-amount">Amount (₦)</label>
@@ -77,23 +94,21 @@
           </div>
 
           <div class="form-group">
-            <label for="transaction-type">Type</label>
-            <div class="type-selector" role="radiogroup" aria-label="Transaction type">
-              <label class="type-option income-opt">
-                <input type="radio" name="transaction-type" value="Income" checked>
-                <span class="type-btn">Income</span>
-              </label>
-              <label class="type-option expense-opt">
-                <input type="radio" name="transaction-type" value="Expense">
-                <span class="type-btn">Expense</span>
-              </label>
-            </div>
+            <label for="transaction-date">Date</label>
+            <input 
+              type="date" 
+              id="transaction-date" 
+              name="transaction-date" 
+              required
+            >
+            <small class="error-msg" id="date-error">Please select a valid date</small>
           </div>
         </div>
 
+        <!-- 5. Save Transaction Button -->
         <div class="form-actions">
           <button type="submit" class="btn btn-primary" id="submit-btn">
-            Add Transaction
+            Save Transaction
           </button>
           <button type="button" class="btn btn-secondary" id="cancel-btn" style="display: none;">
             Cancel

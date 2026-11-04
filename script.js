@@ -26,11 +26,13 @@
   const editIdInput = document.getElementById('edit-id');
   const nameInput = document.getElementById('transaction-name');
   const amountInput = document.getElementById('transaction-amount');
+  const dateInput = document.getElementById('transaction-date');
   const typeRadios = document.querySelectorAll('input[name="transaction-type"]');
   const submitBtn = document.getElementById('submit-btn');
   const cancelBtn = document.getElementById('cancel-btn');
   const nameError = document.getElementById('name-error');
   const amountError = document.getElementById('amount-error');
+  const dateError = document.getElementById('date-error');
 
   const searchInput = document.getElementById('search-input');
   const clearSearchBtn = document.getElementById('clear-search-btn');
@@ -88,6 +90,26 @@
     if (!val) return NaN;
     const clean = val.toString().replace(/,/g, '').trim();
     return parseFloat(clean);
+  }
+
+  // --- Date Helpers ---
+  function getLocalDateString(d = new Date()) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function formatDateDisplay(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const year = Number(parts[0]);
+    const month = Number(parts[1]) - 1;
+    const day = Number(parts[2]);
+    const d = new Date(year, month, day);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   // --- Local Storage Helpers ---
@@ -164,7 +186,9 @@
         const formattedAmount = formatCurrency(t.amount).toLowerCase();
         const amountMatch = amountClean.includes(query.replace(/,/g, '')) || formattedAmount.includes(query);
         const typeMatch = t.type.toLowerCase().includes(query);
-        return nameMatch || amountMatch || typeMatch;
+        const dateMatch = (t.date && t.date.toLowerCase().includes(query)) ||
+                          (t.date && formatDateDisplay(t.date).toLowerCase().includes(query));
+        return nameMatch || amountMatch || typeMatch || dateMatch;
       }
 
       return true;
@@ -210,12 +234,17 @@
       const isIncome = t.type === 'Income';
       const formattedAmount = (isIncome ? '+' : '-') + formatCurrency(t.amount);
       const isCurrentlyEditing = t.id === currentEditId;
+      const rawDate = t.date || (t.createdAt ? getLocalDateString(new Date(t.createdAt)) : '');
+      const displayDate = formatDateDisplay(rawDate);
 
       return `
         <li class="transaction-item ${isIncome ? 'type-income' : 'type-expense'} ${isCurrentlyEditing ? 'editing' : ''}" data-id="${t.id}">
           <div class="item-left">
             <span class="item-name" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>
-            <span class="item-badge">${escapeHtml(t.type)}</span>
+            <div class="item-meta">
+              <span class="item-badge">${escapeHtml(t.type)}</span>
+              ${displayDate ? `<span class="item-date">${escapeHtml(displayDate)}</span>` : ''}
+            </div>
           </div>
           <div class="item-right">
             <span class="item-amount ${isIncome ? 'income' : 'expense'}">${formattedAmount}</span>
@@ -284,6 +313,16 @@
       amountError.classList.remove('visible');
     }
 
+    const dateVal = dateInput.value.trim();
+    if (!dateVal) {
+      dateInput.classList.add('has-error');
+      dateError.classList.add('visible');
+      isValid = false;
+    } else {
+      dateInput.classList.remove('has-error');
+      dateError.classList.remove('visible');
+    }
+
     return isValid;
   }
 
@@ -306,12 +345,15 @@
     currentEditId = null;
     formTitle.textContent = 'Add New Transaction';
     formModeIndicator.style.display = 'none';
-    submitBtn.textContent = 'Add Transaction';
+    submitBtn.textContent = 'Save Transaction';
     cancelBtn.style.display = 'none';
     nameInput.classList.remove('has-error');
     nameError.classList.remove('visible');
     amountInput.classList.remove('has-error');
     amountError.classList.remove('visible');
+    dateInput.classList.remove('has-error');
+    dateError.classList.remove('visible');
+    dateInput.value = getLocalDateString();
     setSelectedType('Income');
   }
 
@@ -323,6 +365,7 @@
     const name = nameInput.value.trim();
     const amount = parseFloat(parseNumericAmount(amountInput.value).toFixed(2));
     const type = getSelectedType();
+    const date = dateInput.value || getLocalDateString();
 
     if (currentEditId) {
       // Editing existing transaction
@@ -333,6 +376,7 @@
           name,
           amount,
           type,
+          date,
           updatedAt: Date.now()
         };
       }
@@ -343,6 +387,7 @@
         name,
         amount,
         type,
+        date,
         createdAt: Date.now()
       };
       // Add to front of the list
@@ -363,17 +408,20 @@
     editIdInput.value = tx.id;
     nameInput.value = tx.name;
     amountInput.value = formatAmountValue(tx.amount.toString());
+    dateInput.value = tx.date || (tx.createdAt ? getLocalDateString(new Date(tx.createdAt)) : getLocalDateString());
     setSelectedType(tx.type);
 
     formTitle.textContent = 'Edit Transaction';
     formModeIndicator.style.display = 'inline-block';
-    submitBtn.textContent = 'Save Changes';
+    submitBtn.textContent = 'Save Transaction';
     cancelBtn.style.display = 'inline-block';
 
     nameInput.classList.remove('has-error');
     nameError.classList.remove('visible');
     amountInput.classList.remove('has-error');
     amountError.classList.remove('visible');
+    dateInput.classList.remove('has-error');
+    dateError.classList.remove('visible');
 
     // Scroll up smoothly to form
     form.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -419,6 +467,13 @@
       if (nameInput.value.trim()) {
         nameInput.classList.remove('has-error');
         nameError.classList.remove('visible');
+      }
+    });
+
+    dateInput.addEventListener('input', () => {
+      if (dateInput.value) {
+        dateInput.classList.remove('has-error');
+        dateError.classList.remove('visible');
       }
     });
 
@@ -556,6 +611,7 @@
   // --- Initialize App ---
   function init() {
     loadTransactions();
+    dateInput.value = getLocalDateString();
     setupEventListeners();
     renderAll();
   }

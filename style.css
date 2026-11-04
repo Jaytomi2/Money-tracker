@@ -222,7 +222,8 @@ body {
 }
 
 .form-group input[type="text"],
-.form-group input[type="number"] {
+.form-group input[type="number"],
+.form-group input[type="date"] {
   width: 100%;
   padding: 0.65rem 0.85rem;
   font-size: 0.95rem;
@@ -515,6 +516,18 @@ body {
   letter-spacing: 0.04em;
   padding: 0.15rem 0.45rem;
   border-radius: var(--radius-sm);
+}
+
+.item-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.item-date {
+  font-size: 0.72rem;
+  color: var(--text-muted);
 }
 
 .type-income .item-badge {
